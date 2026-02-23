@@ -15,7 +15,7 @@ CHANNELS = [
 ]
 
 # We will store the File ID in this variable while the bot is running
-CURRENT_FILE_ID = BQACAgUAAxkBAAMCaZvfA-wehdSHmXPkHiGCYZQrEv0AAuUYAAIXktlU5V1WYH7J0lg6BA 
+CURRENT_FILE_ID = "BQACAgUAAxkBAAMCaZvfA-wehdSHmXPkHiGCYZQrEv0AAuUYAAIXktlU5V1WYH7J0lg6BA"
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -91,3 +91,4 @@ if __name__ == '__main__':
     print("Bot is running...")
 
     app.run_polling()
+
