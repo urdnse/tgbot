@@ -1,10 +1,13 @@
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# --- CONFIGURATION ---
+# --- 1. CONFIGURATION ---
 TOKEN = "8685665586:AAEN8p9Hv0mzCHyC1HQQtZfC_3M9cP-ar1U"
-ADMIN_ID = 7447549373  # Replace with YOUR numeric Telegram ID (Get it from @userinfobot)
+
+# Paste your Mediafire, Catbox, or Google Drive link here
+FILE_LINK = "https://www.mediafire.com/your-file-link"
 
 # List your 4 channels
 CHANNELS = [
@@ -13,12 +16,9 @@ CHANNELS = [
     {"id": -1003863147385, "link": "https://t.me/+068-brtYHko4ZDI1"},
     {"id": -1003855670834, "link": "https://t.me/+Q2JvbMtOFFwyNGE9"},
 ]
-
-# We will store the File ID in this variable while the bot is running
-CURRENT_FILE_ID = "BQACAgUAAxkBAAMEaZvj2jLRfq-PPqINeTxfkcKWVWEAAgMeAALUguBUFwewyz0i3do6BA"
-
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+# --- 2. MEMBERSHIP CHECK ---
 async def check_membership(user_id, context):
     not_joined = []
     for channel in CHANNELS:
@@ -30,37 +30,27 @@ async def check_membership(user_id, context):
             not_joined.append(channel) 
     return not_joined
 
-# --- ADMIN FEATURE: SET NEW FILE ---
-async def handle_admin_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global CURRENT_FILE_ID
-    # Only the admin can change the file
-    if update.effective_user.id == ADMIN_ID:
-        if update.message.document:
-            CURRENT_FILE_ID = update.message.document.file_id
-        elif update.message.video:
-            CURRENT_FILE_ID = update.message.video.file_id
-        
-        await update.message.reply_text(f"✅ **Success!** New file set.\n\nFile ID: `{CURRENT_FILE_ID}`\nAll new users will receive this file now.")
-    else:
-        await update.message.reply_text("❌ You are not the admin.")
-
-# --- USER FEATURES ---
+# --- 3. BOT LOGIC ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not CURRENT_FILE_ID:
-        await update.message.reply_text("The admin hasn't set a file yet. Please wait.")
-        return
-
     user_id = update.effective_user.id
     missing = await check_membership(user_id, context)
 
     if not missing:
-        await update.message.reply_text("✅ Access Granted! Sending file...")
-        await update.message.reply_document(document=CURRENT_FILE_ID)
-    else:
-        keyboard = [[InlineKeyboardButton("Join " + c['link'].split('/')[-1], url=c['link'])] for c in missing]
-        keyboard.append([InlineKeyboardButton("🔄 Try Again", callback_data="check")])
+        # Create a "Download" button that opens the link
+        keyboard = [[InlineKeyboardButton("🚀 Download File Now", url=FILE_LINK)]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
-            "❌ Please join our channels to get the file:",
+            "✅ Access Granted! Click the button below to download your file:",
+            reply_markup=reply_markup
+        )
+    else:
+        # Create join buttons
+        keyboard = [[InlineKeyboardButton("Join Channel", url=c['link'])] for c in missing]
+        keyboard.append([InlineKeyboardButton("🔄 Verify & Download", callback_data="check")])
+        
+        await update.message.reply_text(
+            "👋 Welcome! You must join our channels to get the download link:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
@@ -72,25 +62,20 @@ async def check_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     missing = await check_membership(user_id, context)
 
     if not missing:
-        await query.edit_message_text("✅ Verification successful! Sending file...")
-        await context.bot.send_document(chat_id=user_id, document=CURRENT_FILE_ID)
+        keyboard = [[InlineKeyboardButton("🚀 Download File Now", url=FILE_LINK)]]
+        await query.edit_message_text(
+            "✅ Success! You can now download the file:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     else:
-        keyboard = [[InlineKeyboardButton("Join " + c['link'].split('/')[-1], url=c['link'])] for c in missing]
+        keyboard = [[InlineKeyboardButton("Join Channel", url=c['link'])] for c in missing]
         keyboard.append([InlineKeyboardButton("🔄 Try Again", callback_data="check")])
-        await query.edit_message_text("⚠️ Join ALL channels first!", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text("⚠️ You still need to join all channels!", reply_markup=InlineKeyboardMarkup(keyboard))
 
 if __name__ == '__main__':
     app = Application.builder().token(TOKEN).build()
-    
-    # This handler listens for files sent by the Admin
-    app.add_handler(MessageHandler(filters.Document.ALL | filters.VIDEO, handle_admin_file))
-    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(check_button, pattern="check"))
     
-    print("Bot is running...")
-
+    print("Link Bot is running...")
     app.run_polling()
-
-
-
